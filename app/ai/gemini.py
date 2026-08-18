@@ -17,4 +17,5 @@ chat = client.chats.create(
 def ask_gemini(prompt: str) -> str:
     response = chat.send_message(prompt)
 
+
     return response.text
