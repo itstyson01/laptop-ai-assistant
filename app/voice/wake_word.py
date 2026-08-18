@@ -4,45 +4,102 @@ import pyaudio
 import numpy as np
 
 
+SAMPLE_RATE = 16000
+CHUNK = 1280
+WAKE_WORD_THRESHOLD = 0.3
+
+
+openwakeword.utils.download_models()
+
+model = Model()
+
+
 def wait_for_wake_word():
-
-    openwakeword.utils.download_models()
-
-    model = Model()
 
     audio = pyaudio.PyAudio()
 
     stream = audio.open(
         format=pyaudio.paInt16,
         channels=1,
-        rate=16000,
+        rate=SAMPLE_RATE,
         input=True,
-        frames_per_buffer=1280
+        frames_per_buffer=CHUNK
     )
 
     print("Listening for wake word...")
 
-    while True:
+    try:
 
-        audio_data = stream.read(
-            1280,
-            exception_on_overflow=False
-        )
+        while True:
 
-        audio_array = np.frombuffer(
-            audio_data,
-            dtype=np.int16
-        )
+            audio_data = stream.read(
+                CHUNK,
+                exception_on_overflow=False
+            )
 
-        prediction = model.predict(audio_array)
+            audio_array = np.frombuffer(
+                audio_data,
+                dtype=np.int16
+            )
 
-        for wake_word, score in prediction.items():
+            prediction = model.predict(audio_array)
 
-            if score > 0.5:
-                print(f"Wake word detected: {wake_word}")
+            for wake_word, score in prediction.items():
 
-                stream.stop_stream()
-                stream.close()
-                audio.terminate()
+                if score > WAKE_WORD_THRESHOLD:
 
-                return True
+                    print(f"Wake word detected: {wake_word}")
+
+                    return True
+
+    finally:
+
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+
+
+def listen_for_wake_word(stop_event, detected_event):
+
+    audio = pyaudio.PyAudio()
+
+    stream = audio.open(
+        format=pyaudio.paInt16,
+        channels=1,
+        rate=SAMPLE_RATE,
+        input=True,
+        frames_per_buffer=CHUNK
+    )
+
+    try:
+
+        while not stop_event.is_set():
+
+            audio_data = stream.read(
+                CHUNK,
+                exception_on_overflow=False
+            )
+
+            audio_array = np.frombuffer(
+                audio_data,
+                dtype=np.int16
+            )
+
+            prediction = model.predict(audio_array)
+
+            for wake_word, score in prediction.items():
+
+                if score > WAKE_WORD_THRESHOLD:
+
+                    print(f"Wake word detected during TTS: {wake_word}")
+
+                    detected_event.set()
+                    stop_event.set()
+
+                    return
+
+    finally:
+
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()

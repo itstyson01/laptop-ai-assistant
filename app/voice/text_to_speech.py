@@ -3,18 +3,25 @@ import pygame
 
 
 VOICE = "en-US-AriaNeural"
+OUTPUT_FILE = "response.mp3"
 
 
 async def text_to_speech(text):
+
     communicate = edge_tts.Communicate(text, VOICE)
 
-    await communicate.save("response.mp3")
+    await communicate.save(OUTPUT_FILE)
 
-    pygame.mixer.init()
-    pygame.mixer.music.load("response.mp3")
+    if not pygame.mixer.get_init():
+        pygame.mixer.init()
+
+    pygame.mixer.music.load(OUTPUT_FILE)
     pygame.mixer.music.play()
 
-    while pygame.mixer.music.get_busy():
-        pass
 
-    pygame.mixer.quit()
+def stop_speaking():
+
+    if pygame.mixer.get_init():
+
+        pygame.mixer.music.stop()
+        pygame.mixer.quit()
