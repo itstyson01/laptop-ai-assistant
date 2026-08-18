@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 data/memory/
 .vscode/
+recording.wav
+response.mp3
